@@ -35,6 +35,7 @@ class DownloadManager {
   final Map<String, CancelToken> _tokens = {};
   final Map<String, StreamSubscription<List<int>>> _ytSubs = {};
   final Map<String, Completer<void>> _ytCompleters = {};
+  final Set<String> _hlsCancel = {};
   final Set<String> _active = {};
   final List<DownloadTask> _queue = [];
   final Map<String, int> _retries = {};
@@ -57,7 +58,9 @@ class DownloadManager {
     for (final task in _queue) {
       if (!_hasSlot) break;
       if (task.status == DownloadStatus.queued && !_active.contains(task.id)) {
-        if (task.youtubeItag != null && task.youtubeVideoId != null) {
+        if (task.isHls) {
+          _startHls(task);
+        } else if (task.youtubeItag != null && task.youtubeVideoId != null) {
           _startYoutube(task);
         } else {
           _startHttp(task);
@@ -148,6 +151,141 @@ class DownloadManager {
       _active.remove(task.id);
       _pump();
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // HLS path (.m3u8) — download every media segment and concatenate them.
+  // ---------------------------------------------------------------------------
+  Future<void> _startHls(DownloadTask task) async {
+    _active.add(task.id);
+    _hlsCancel.remove(task.id);
+    task.status = DownloadStatus.downloading;
+    task.error = null;
+    _notify(task);
+
+    final file = File(task.savePath);
+    IOSink? sink;
+    try {
+      await file.parent.create(recursive: true);
+      final segments = await _resolveHlsSegments(task.url);
+      if (segments.isEmpty) {
+        throw Exception('No segments found in the HLS playlist.');
+      }
+
+      // Fresh assembly each run (segments are concatenated in order).
+      sink = file.openWrite();
+      task.receivedBytes = 0;
+      task.totalBytes = 0; // total unknown up-front -> indeterminate progress
+      var done = 0;
+      var lastNotified = DateTime.fromMillisecondsSinceEpoch(0);
+
+      for (final seg in segments) {
+        if (_hlsCancel.contains(task.id)) break;
+        final res = await _dio.get<List<int>>(
+          seg,
+          options: Options(
+            responseType: ResponseType.bytes,
+            headers: {'User-Agent': _userAgent},
+            followRedirects: true,
+          ),
+        );
+        final bytes = res.data ?? const <int>[];
+        sink.add(bytes);
+        task.receivedBytes += bytes.length;
+        done++;
+        final now = DateTime.now();
+        if (now.difference(lastNotified).inMilliseconds > 400) {
+          lastNotified = now;
+          _notify(task);
+          NotificationService.instance.showProgress(
+            id: task.id.hashCode,
+            title: task.title,
+            progress: ((done / segments.length) * 100).round(),
+          );
+        }
+      }
+
+      await sink.flush();
+      await sink.close();
+
+      if (_hlsCancel.contains(task.id)) {
+        task.status = DownloadStatus.paused;
+        _notify(task);
+      } else {
+        task.totalBytes = task.receivedBytes;
+        task.status = DownloadStatus.completed;
+        _retries.remove(task.id);
+        _notify(task);
+        await NotificationService.instance.cancel(task.id.hashCode);
+        await NotificationService.instance
+            .showComplete(id: task.id.hashCode, title: task.title);
+      }
+    } catch (e) {
+      try {
+        await sink?.flush();
+        await sink?.close();
+      } catch (_) {}
+      await _handleFailure(task, e.toString());
+    } finally {
+      _hlsCancel.remove(task.id);
+      _active.remove(task.id);
+      _pump();
+    }
+  }
+
+  /// Fetches an HLS playlist and returns the ordered list of absolute segment
+  /// URLs. Master playlists resolve to their highest-bandwidth variant first.
+  Future<List<String>> _resolveHlsSegments(String playlistUrl) async {
+    final text = await _fetchText(playlistUrl);
+    final lines =
+        text.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty);
+
+    // Master playlist: pick the variant with the greatest BANDWIDTH.
+    if (text.contains('#EXT-X-STREAM-INF')) {
+      String? bestUri;
+      var bestBandwidth = -1;
+      final list = lines.toList();
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].startsWith('#EXT-X-STREAM-INF')) {
+          final bw = int.tryParse(
+                  RegExp(r'BANDWIDTH=(\d+)').firstMatch(list[i])?.group(1) ??
+                      '') ??
+              0;
+          if (i + 1 < list.length && !list[i + 1].startsWith('#')) {
+            if (bw >= bestBandwidth) {
+              bestBandwidth = bw;
+              bestUri = list[i + 1];
+            }
+          }
+        }
+      }
+      if (bestUri != null) {
+        return _resolveHlsSegments(_absoluteUrl(playlistUrl, bestUri));
+      }
+    }
+
+    // Media playlist: every non-comment line is a segment.
+    return [
+      for (final l in lines)
+        if (!l.startsWith('#')) _absoluteUrl(playlistUrl, l),
+    ];
+  }
+
+  Future<String> _fetchText(String url) async {
+    final res = await _dio.get<String>(
+      url,
+      options: Options(
+        responseType: ResponseType.plain,
+        headers: {'User-Agent': _userAgent},
+        followRedirects: true,
+      ),
+    );
+    return res.data ?? '';
+  }
+
+  String _absoluteUrl(String base, String ref) {
+    if (ref.startsWith('http')) return ref;
+    return Uri.parse(base).resolve(ref).toString();
   }
 
   // ---------------------------------------------------------------------------
@@ -277,12 +415,14 @@ class DownloadManager {
     _tokens[task.id]?.cancel('paused');
     _ytSubs[task.id]?.cancel();
     _ytCompleters[task.id]?.complete();
+    _hlsCancel.add(task.id);
     _notify(task);
   }
 
   void resume(DownloadTask task) {
     if (task.status == DownloadStatus.downloading) return;
     _retries.remove(task.id);
+    _hlsCancel.remove(task.id);
     task.status = DownloadStatus.queued;
     task.error = null;
     if (!_queue.contains(task)) _queue.add(task);
@@ -294,6 +434,7 @@ class DownloadManager {
     _tokens[task.id]?.cancel('canceled');
     _ytSubs[task.id]?.cancel();
     _ytCompleters[task.id]?.complete();
+    _hlsCancel.add(task.id);
     task.status = DownloadStatus.canceled;
     _queue.remove(task);
     final f = File(task.savePath);

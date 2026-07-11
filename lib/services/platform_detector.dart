@@ -25,9 +25,16 @@ class PlatformDetector {
   };
 
   static final _directFile = RegExp(
-    r'\.(mp4|m4v|mov|webm|mkv|mp3|m4a|aac|wav|flv|3gp)(\?.*)?$',
+    r'\.(mp4|m4v|mov|webm|mkv|avi|wmv|flv|3gp|ts|m3u8|mpd|'
+    r'mp3|m4a|aac|wav|flac|ogg|opus|weba)(\?.*)?$',
     caseSensitive: false,
   );
+
+  /// HLS playlists need segment-based downloading rather than a plain GET.
+  static final _hls = RegExp(r'\.m3u8(\?.*)?$', caseSensitive: false);
+
+  /// Whether [url] points to an HLS (`.m3u8`) stream.
+  static bool isHls(String url) => _hls.hasMatch(url.trim());
 
   /// Returns the detected [MediaSource] for [rawUrl].
   static MediaSource detect(String rawUrl) {

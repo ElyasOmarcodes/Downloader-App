@@ -18,6 +18,7 @@ class MediaFormat {
     this.hasVideo = false,
     this.audioOnlyMp3 = false,
     this.itag,
+    this.isHls = false,
   });
 
   /// Direct download URL for this format.
@@ -48,6 +49,9 @@ class MediaFormat {
   /// plain HTTP GET — this is what avoids the 403 on adaptive audio streams.
   final int? itag;
 
+  /// True for HLS (`.m3u8`) streams, which are downloaded segment-by-segment.
+  final bool isHls;
+
   String get displayQuality {
     if (qualityLabel != null) return qualityLabel!;
     if (kind == MediaKind.audio) {
@@ -75,6 +79,7 @@ class MediaFormat {
         'hasVideo': hasVideo,
         'audioOnlyMp3': audioOnlyMp3,
         'itag': itag,
+        'isHls': isHls,
       };
 
   factory MediaFormat.fromJson(Map<String, dynamic> json) => MediaFormat(
@@ -88,5 +93,6 @@ class MediaFormat {
         hasVideo: json['hasVideo'] as bool? ?? false,
         audioOnlyMp3: json['audioOnlyMp3'] as bool? ?? false,
         itag: json['itag'] as int?,
+        isHls: json['isHls'] as bool? ?? false,
       );
 }

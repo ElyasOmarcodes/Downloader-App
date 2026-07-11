@@ -20,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _controller = TextEditingController();
   MediaSource _detected = MediaSource.unknown;
+  ValueNotifier<String?>? _clipNotifier;
 
   @override
   void initState() {
@@ -31,7 +32,26 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final notifier = context.read<DownloadProvider>().clipboardLink;
+    if (!identical(notifier, _clipNotifier)) {
+      _clipNotifier?.removeListener(_onClipboard);
+      _clipNotifier = notifier..addListener(_onClipboard);
+    }
+  }
+
+  void _onClipboard() {
+    final link = _clipNotifier?.value;
+    if (link != null && link.isNotEmpty && mounted) {
+      _controller.text = link;
+      _controller.selection = TextSelection.collapsed(offset: link.length);
+    }
+  }
+
+  @override
   void dispose() {
+    _clipNotifier?.removeListener(_onClipboard);
     _controller.dispose();
     super.dispose();
   }

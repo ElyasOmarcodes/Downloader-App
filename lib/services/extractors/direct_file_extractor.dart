@@ -23,17 +23,22 @@ class DirectFileExtractor implements Extractor {
         ? uri.pathSegments.last
         : 'download';
     final ext = name.contains('.') ? name.split('.').last : 'mp4';
+    final hls = PlatformDetector.isHls(url);
 
+    // HLS playlists are tiny text files; a HEAD gives no useful size and the
+    // real download is segment-based, so skip probing for them.
     int? size;
     bool isAudio = false;
-    try {
-      final res = await _dio.head<void>(url);
-      final len = res.headers.value('content-length');
-      size = len != null ? int.tryParse(len) : null;
-      final type = res.headers.value('content-type') ?? '';
-      isAudio = type.startsWith('audio/');
-    } catch (_) {
-      // HEAD not supported by every server; fall back to unknown size.
+    if (!hls) {
+      try {
+        final res = await _dio.head<void>(url);
+        final len = res.headers.value('content-length');
+        size = len != null ? int.tryParse(len) : null;
+        final type = res.headers.value('content-type') ?? '';
+        isAudio = type.startsWith('audio/');
+      } catch (_) {
+        // HEAD not supported by every server; fall back to unknown size.
+      }
     }
 
     return MediaInfo(
@@ -44,11 +49,12 @@ class DirectFileExtractor implements Extractor {
         MediaFormat(
           url: url,
           kind: isAudio ? MediaKind.audio : MediaKind.muxed,
-          container: ext,
-          qualityLabel: isAudio ? 'Audio' : 'Original',
+          container: hls ? 'ts' : ext,
+          qualityLabel: hls ? 'HLS stream' : (isAudio ? 'Audio' : 'Original'),
           sizeBytes: size,
           hasAudio: true,
           hasVideo: !isAudio,
+          isHls: hls,
         ),
       ],
     );

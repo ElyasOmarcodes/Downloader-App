@@ -34,6 +34,7 @@ class DownloadTask {
     this.isAudio = false,
     this.youtubeVideoId,
     this.youtubeItag,
+    this.isHls = false,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -56,6 +57,9 @@ class DownloadTask {
   /// 403 that plain HTTP GETs hit on adaptive audio streams).
   final String? youtubeVideoId;
   final int? youtubeItag;
+
+  /// True for HLS (`.m3u8`) downloads assembled from media segments.
+  final bool isHls;
 
   int totalBytes;
 
@@ -99,6 +103,7 @@ class DownloadTask {
         'isAudio': isAudio,
         'youtubeVideoId': youtubeVideoId,
         'youtubeItag': youtubeItag,
+        'isHls': isHls,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -117,6 +122,7 @@ class DownloadTask {
         isAudio: json['isAudio'] as bool? ?? false,
         youtubeVideoId: json['youtubeVideoId'] as String?,
         youtubeItag: json['youtubeItag'] as int?,
+        isHls: json['isHls'] as bool? ?? false,
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
       );
 
@@ -141,6 +147,7 @@ class DownloadTask {
       isAudio: isAudio,
       youtubeVideoId: youtubeVideoId,
       youtubeItag: format.itag,
+      isHls: format.isHls,
       totalBytes: format.sizeBytes ?? 0,
     );
   }

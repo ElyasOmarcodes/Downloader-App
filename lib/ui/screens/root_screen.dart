@@ -82,7 +82,9 @@ class _RootScreenState extends State<RootScreen> with WidgetsBindingObserver {
       if (PlatformDetector.detect(url) == MediaSource.unknown) return;
       _lastHandledClipboard = url;
       if (!mounted) return;
-      context.read<DownloadProvider>().autoResolve(url);
+      // Only prefill the Home field and switch to it — do NOT auto-resolve.
+      context.read<DownloadProvider>().clipboardLink.value = url;
+      setState(() => _index = 0);
     } catch (_) {}
   }
 

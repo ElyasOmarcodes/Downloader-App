@@ -53,10 +53,14 @@ class DownloadProvider extends ChangeNotifier {
   MediaInfo? get lastResolved => _lastResolved;
 
   /// Emits resolved media that the UI should present a download sheet for
-  /// (used by share-intent and clipboard auto-detection).
+  /// (used by share intents).
   final StreamController<MediaInfo> _autoSheet =
       StreamController<MediaInfo>.broadcast();
   Stream<MediaInfo> get autoSheetStream => _autoSheet.stream;
+
+  /// A link detected on the clipboard: the Home field prefills it, but nothing
+  /// is resolved until the user taps Fetch.
+  final ValueNotifier<String?> clipboardLink = ValueNotifier<String?>(null);
 
   Future<void> loadPersisted() async {
     final saved = await StorageService.instance.loadTasks();
@@ -256,6 +260,7 @@ class DownloadProvider extends ChangeNotifier {
   @override
   void dispose() {
     _autoSheet.close();
+    clipboardLink.dispose();
     _extractor.dispose();
     super.dispose();
   }

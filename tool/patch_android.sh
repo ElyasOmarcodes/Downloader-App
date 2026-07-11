@@ -65,6 +65,16 @@ EOF
   echo "Enabled core-library desugaring in $GRADLE."
 fi
 
+# --- 2b. Bump Android Gradle Plugin ---------------------------------------
+# webview_flutter pulls androidx.webkit 1.14+, which requires AGP >= 8.1.1,
+# but the Flutter 3.27 template pins 8.1.0. Bump it (8.1.4 stays compatible
+# with the template's Gradle 8.3 wrapper).
+SETTINGS="android/settings.gradle"
+if [[ -f "$SETTINGS" ]]; then
+  perl -0pi -e 's/(id "com\.android\.application" version ")[0-9.]+(")/${1}8.1.4${2}/' "$SETTINGS"
+  echo "Bumped Android Gradle Plugin to 8.1.4 in $SETTINGS."
+fi
+
 # --- 3. Align JVM target to 17 across all modules -------------------------
 # Some plugins (e.g. receive_sharing_intent) compile Kotlin at JVM 17 while the
 # Flutter template defaults Java to 1.8, which Gradle rejects. Force every

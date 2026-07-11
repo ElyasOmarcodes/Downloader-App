@@ -21,7 +21,7 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: Text(l.t('appName')),
-            subtitle: const Text('Version 1.2.0 • Flutter cross-platform'),
+            subtitle: const Text('Version 1.3.0 • Flutter cross-platform'),
           ),
           const Divider(),
 

@@ -21,15 +21,17 @@ class YoutubeExtractor implements Extractor {
   @override
   Future<MediaInfo> resolve(String url) async {
     try {
-      final video = await _yt.videos.get(url);
-      // Start both requests in parallel to keep link resolution fast; the
-      // caption fetch is optional so we swallow its errors.
-      final manifestFuture = _yt.videos.streamsClient.getManifest(video.id);
+      // Parse the video id locally (no network) so metadata, streams and
+      // captions can all be fetched in parallel instead of sequentially.
+      final videoId = yt.VideoId(url);
+      final videoFuture = _yt.videos.get(videoId);
+      final manifestFuture = _yt.videos.streamsClient.getManifest(videoId);
       final captionsFuture = _yt.videos.closedCaptions
-          .getManifest(video.id)
+          .getManifest(videoId)
           .then<yt.ClosedCaptionManifest?>((m) => m)
           .catchError((_) => null);
 
+      final video = await videoFuture;
       final manifest = await manifestFuture;
 
       final subtitles = <SubtitleTrack>[];
