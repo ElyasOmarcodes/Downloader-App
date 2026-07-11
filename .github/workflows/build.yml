@@ -126,7 +126,14 @@ jobs:
       - run: flutter pub get
       - name: Diagnose toolchain
         run: flutter doctor -v
-      - run: flutter build windows --release
+      # VS 2026's MSVC turns <experimental/coroutine> (used by
+      # permission_handler_windows) into a hard error (STL1011). Microsoft's
+      # documented escape hatch is this macro; cl.exe reads extra flags from
+      # the CL environment variable.
+      - name: Build Windows
+        env:
+          CL: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
+        run: flutter build windows --release
       - name: Zip Windows build
         run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath mediagrab-windows.zip
       - uses: actions/upload-artifact@v4
