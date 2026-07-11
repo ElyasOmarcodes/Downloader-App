@@ -65,26 +65,27 @@ ROOT_GRADLE="android/build.gradle"
 if [[ -f "$ROOT_GRADLE" ]] && ! grep -q "MediaGrab JVM 17" "$ROOT_GRADLE"; then
   cat >> "$ROOT_GRADLE" <<'EOF'
 
-// MediaGrab JVM 17 alignment: keep Java and Kotlin on the same target so
-// plugins compiled at 17 don't clash with a Java 1.8 default. Uses lazy
-// plugin/task hooks (no afterEvaluate) so it is safe even for subprojects the
-// Flutter template evaluates early via evaluationDependsOn(':app').
+// MediaGrab JVM 17 alignment: force BOTH Java and Kotlin to target 17 in every
+// module so plugins (shared_preferences_android, receive_sharing_intent, ...)
+// don't end up with mismatched Java/Kotlin targets. We must run after each
+// plugin's own build script sets its compileOptions, i.e. in afterEvaluate.
+// The Flutter template pre-evaluates :app (evaluationDependsOn), so we guard
+// with state.executed to avoid "afterEvaluate on already-evaluated project".
 subprojects {
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-        kotlinOptions {
-            jvmTarget = "17"
-        }
-    }
-    plugins.withId("com.android.application") {
-        extensions.getByName("android").compileOptions {
-            sourceCompatibility JavaVersion.VERSION_17
-            targetCompatibility JavaVersion.VERSION_17
-        }
-    }
-    plugins.withId("com.android.library") {
-        extensions.getByName("android").compileOptions {
-            sourceCompatibility JavaVersion.VERSION_17
-            targetCompatibility JavaVersion.VERSION_17
+    if (!state.executed) {
+        afterEvaluate { project ->
+            def androidExt = project.extensions.findByName("android")
+            if (androidExt != null) {
+                androidExt.compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+            project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+                kotlinOptions {
+                    jvmTarget = "17"
+                }
+            }
         }
     }
 }
