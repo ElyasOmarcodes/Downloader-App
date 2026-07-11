@@ -55,19 +55,18 @@ jobs:
       - name: Patch Android project (permissions + desugaring)
         run: bash tool/patch_android.sh
       - run: flutter pub get
-      - name: Build APKs (split per ABI)
-        run: flutter build apk --release --split-per-abi
+      # A single universal APK that installs on any device (arm/arm64/x86_64).
       - name: Build universal APK
         run: flutter build apk --release
-      - name: Build App Bundle
-        run: flutter build appbundle --release
-      - name: Upload APK artifacts
+      - name: Rename APK
+        run: |
+          mkdir -p out
+          cp build/app/outputs/flutter-apk/app-release.apk out/MediaGrab.apk
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: mediagrab-android
-          path: |
-            build/app/outputs/flutter-apk/*.apk
-            build/app/outputs/bundle/release/*.aab
+          path: out/MediaGrab.apk
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------

@@ -66,19 +66,25 @@ if [[ -f "$ROOT_GRADLE" ]] && ! grep -q "MediaGrab JVM 17" "$ROOT_GRADLE"; then
   cat >> "$ROOT_GRADLE" <<'EOF'
 
 // MediaGrab JVM 17 alignment: keep Java and Kotlin on the same target so
-// plugins compiled at 17 don't clash with a Java 1.8 default.
+// plugins compiled at 17 don't clash with a Java 1.8 default. Uses lazy
+// plugin/task hooks (no afterEvaluate) so it is safe even for subprojects the
+// Flutter template evaluates early via evaluationDependsOn(':app').
 subprojects {
-    afterEvaluate { project ->
-        if (project.extensions.findByName("android") != null) {
-            project.extensions.getByName("android").compileOptions {
-                sourceCompatibility JavaVersion.VERSION_17
-                targetCompatibility JavaVersion.VERSION_17
-            }
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            jvmTarget = "17"
         }
-        project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+    }
+    plugins.withId("com.android.application") {
+        extensions.getByName("android").compileOptions {
+            sourceCompatibility JavaVersion.VERSION_17
+            targetCompatibility JavaVersion.VERSION_17
+        }
+    }
+    plugins.withId("com.android.library") {
+        extensions.getByName("android").compileOptions {
+            sourceCompatibility JavaVersion.VERSION_17
+            targetCompatibility JavaVersion.VERSION_17
         }
     }
 }
