@@ -113,9 +113,12 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      # Use the LATEST stable Flutter here: the windows-latest runner ships
+      # Visual Studio 2026 (v18), which pinned 3.27.4 doesn't map (it falls
+      # back to the missing "VS 16 2019" CMake generator). Newer Flutter
+      # recognizes VS 2026.
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
       - name: Scaffold Windows project
