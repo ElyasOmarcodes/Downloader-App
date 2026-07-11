@@ -26,6 +26,14 @@ else
   echo "Patched permissions into $MANIFEST."
 fi
 
+# --- 1a. App display name ---------------------------------------------------
+# flutter create sets android:label to the project name (elyasomar); show the
+# friendly product name instead.
+if grep -q 'android:label="elyasomar"' "$MANIFEST"; then
+  sed -i 's/android:label="elyasomar"/android:label="Media Graph"/' "$MANIFEST"
+  echo "Set app label to Media Graph."
+fi
+
 # --- 1b. Share-intent filter (receive_sharing_intent) ----------------------
 if grep -q 'action.SEND' "$MANIFEST"; then
   echo "Share intent-filter already present."

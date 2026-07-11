@@ -44,7 +44,7 @@ class MediaGrabApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
-            themeMode: ThemeMode.system,
+            themeMode: settings.themeMode,
             locale: Locale(settings.languageCode),
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: const [

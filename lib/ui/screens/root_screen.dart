@@ -11,6 +11,7 @@ import '../../providers/download_provider.dart';
 import '../../services/platform_detector.dart';
 import '../../services/share_service.dart';
 import '../widgets/format_selection_sheet.dart';
+import 'browser_screen.dart';
 import 'downloads_screen.dart';
 import 'home_screen.dart';
 import 'settings_screen.dart';
@@ -33,6 +34,7 @@ class _RootScreenState extends State<RootScreen> with WidgetsBindingObserver {
 
   static const _pages = [
     HomeScreen(),
+    BrowserScreen(),
     DownloadsScreen(),
     SettingsScreen(),
   ];
@@ -113,6 +115,11 @@ class _RootScreenState extends State<RootScreen> with WidgetsBindingObserver {
             icon: const Icon(Icons.home_outlined),
             selectedIcon: const Icon(Icons.home),
             label: l.t('home'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.public_outlined),
+            selectedIcon: const Icon(Icons.public),
+            label: l.t('browser'),
           ),
           NavigationDestination(
             icon: Badge(

@@ -17,6 +17,7 @@ class MediaFormat {
     this.hasAudio = false,
     this.hasVideo = false,
     this.audioOnlyMp3 = false,
+    this.itag,
   });
 
   /// Direct download URL for this format.
@@ -41,6 +42,11 @@ class MediaFormat {
 
   /// When true this represents an "extract audio as MP3" pseudo-format.
   final bool audioOnlyMp3;
+
+  /// YouTube stream tag (itag). When set, the download is fetched through the
+  /// YouTube stream client (which handles throttling / signing) instead of a
+  /// plain HTTP GET — this is what avoids the 403 on adaptive audio streams.
+  final int? itag;
 
   String get displayQuality {
     if (qualityLabel != null) return qualityLabel!;
@@ -68,6 +74,7 @@ class MediaFormat {
         'hasAudio': hasAudio,
         'hasVideo': hasVideo,
         'audioOnlyMp3': audioOnlyMp3,
+        'itag': itag,
       };
 
   factory MediaFormat.fromJson(Map<String, dynamic> json) => MediaFormat(
@@ -80,5 +87,6 @@ class MediaFormat {
         hasAudio: json['hasAudio'] as bool? ?? false,
         hasVideo: json['hasVideo'] as bool? ?? false,
         audioOnlyMp3: json['audioOnlyMp3'] as bool? ?? false,
+        itag: json['itag'] as int?,
       );
 }

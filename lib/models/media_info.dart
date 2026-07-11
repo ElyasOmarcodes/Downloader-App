@@ -13,10 +13,14 @@ class MediaInfo {
     this.thumbnailUrl,
     this.durationSeconds,
     this.subtitles = const [],
+    this.sourceId,
   });
 
   final String sourceUrl;
   final MediaSource source;
+
+  /// Platform-specific media id (e.g. the YouTube video id) when known.
+  final String? sourceId;
   final String title;
   final String? author;
   final String? thumbnailUrl;

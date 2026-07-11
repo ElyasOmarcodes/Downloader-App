@@ -32,6 +32,8 @@ class DownloadTask {
     this.status = DownloadStatus.queued,
     this.error,
     this.isAudio = false,
+    this.youtubeVideoId,
+    this.youtubeItag,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -49,6 +51,11 @@ class DownloadTask {
 
   /// Whether this is an audio-only download (drives which folder it lands in).
   final bool isAudio;
+
+  /// When set, the file is fetched via the YouTube stream client (fixes the
+  /// 403 that plain HTTP GETs hit on adaptive audio streams).
+  final String? youtubeVideoId;
+  final int? youtubeItag;
 
   int totalBytes;
 
@@ -90,6 +97,8 @@ class DownloadTask {
         'status': status.name,
         'error': error,
         'isAudio': isAudio,
+        'youtubeVideoId': youtubeVideoId,
+        'youtubeItag': youtubeItag,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -106,6 +115,8 @@ class DownloadTask {
         status: DownloadStatus.values.byName(json['status'] as String),
         error: json['error'] as String?,
         isAudio: json['isAudio'] as bool? ?? false,
+        youtubeVideoId: json['youtubeVideoId'] as String?,
+        youtubeItag: json['youtubeItag'] as int?,
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
       );
 
@@ -117,6 +128,7 @@ class DownloadTask {
     String? thumbnailUrl,
     String? sourceLabel,
     bool isAudio = false,
+    String? youtubeVideoId,
   }) {
     return DownloadTask(
       id: id,
@@ -127,6 +139,8 @@ class DownloadTask {
       thumbnailUrl: thumbnailUrl,
       sourceLabel: sourceLabel,
       isAudio: isAudio,
+      youtubeVideoId: youtubeVideoId,
+      youtubeItag: format.itag,
       totalBytes: format.sizeBytes ?? 0,
     );
   }

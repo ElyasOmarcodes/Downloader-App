@@ -22,6 +22,18 @@ class DownloadsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(l.t('downloads')),
         actions: [
+          if (active.any((t) => t.status == DownloadStatus.downloading))
+            IconButton(
+              tooltip: l.t('pauseAll'),
+              icon: const Icon(Icons.pause),
+              onPressed: provider.pauseAll,
+            ),
+          if (active.any((t) => t.status != DownloadStatus.downloading))
+            IconButton(
+              tooltip: l.t('resumeAll'),
+              icon: const Icon(Icons.play_arrow),
+              onPressed: provider.resumeAll,
+            ),
           if (completed.isNotEmpty)
             IconButton(
               tooltip: l.t('clearCompleted'),

@@ -73,12 +73,13 @@ class DownloadProvider extends ChangeNotifier {
   }
 
   /// Resolves a pasted URL into [MediaInfo]. Returns null on failure.
-  Future<MediaInfo?> resolve(String url) async {
+  /// [cookie] may carry a logged-in session captured from the in-app browser.
+  Future<MediaInfo?> resolve(String url, {String? cookie}) async {
     _resolving = true;
     _resolveError = null;
     notifyListeners();
     try {
-      final info = await _extractor.resolve(url);
+      final info = await _extractor.resolve(url, cookie: cookie);
       _lastResolved = info;
       return info;
     } catch (e) {
@@ -88,6 +89,13 @@ class DownloadProvider extends ChangeNotifier {
       _resolving = false;
       notifyListeners();
     }
+  }
+
+  /// Resolves a page open in the in-app browser (with its session cookie) and
+  /// presents the download sheet on success.
+  Future<void> resolveViaBrowser(String url, String? cookie) async {
+    final info = await resolve(url, cookie: cookie);
+    if (info != null) _autoSheet.add(info);
   }
 
   /// Resolves [url] coming from a share intent or the clipboard and, on
@@ -163,6 +171,8 @@ class DownloadProvider extends ChangeNotifier {
       thumbnailUrl: info.thumbnailUrl,
       sourceLabel: info.source.label,
       isAudio: isAudio,
+      youtubeVideoId:
+          info.source == MediaSource.youtube ? info.sourceId : null,
     );
     _tasks.add(task);
     notifyListeners();
@@ -193,6 +203,22 @@ class DownloadProvider extends ChangeNotifier {
         ? SettingsService.instance.wifiConcurrency
         : SettingsService.instance.mobileConcurrency;
     _manager.setMaxConcurrent(limit);
+  }
+
+  void pauseAll() {
+    for (final t in _tasks) {
+      if (t.status == DownloadStatus.downloading) _manager.pause(t);
+    }
+  }
+
+  void resumeAll() {
+    _applyConcurrency();
+    for (final t in _tasks) {
+      if (t.status == DownloadStatus.paused ||
+          t.status == DownloadStatus.failed) {
+        _manager.resume(t);
+      }
+    }
   }
 
   void pause(DownloadTask task) => _manager.pause(task);

@@ -20,6 +20,10 @@ class GenericExtractor implements Extractor {
   GenericExtractor(this._dio);
   final Dio _dio;
 
+  /// Optional Cookie header captured from the in-app browser after login,
+  /// letting the extractor fetch gated pages as the logged-in user.
+  String? cookie;
+
   static const _ua =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/124.0 Safari/537.36';
@@ -46,7 +50,11 @@ class GenericExtractor implements Extractor {
         options: Options(
           responseType: ResponseType.plain,
           followRedirects: true,
-          headers: {'User-Agent': _ua, 'Accept-Language': 'en-US,en;q=0.9'},
+          headers: {
+            'User-Agent': _ua,
+            'Accept-Language': 'en-US,en;q=0.9',
+            if (cookie != null && cookie!.isNotEmpty) 'Cookie': cookie!,
+          },
           validateStatus: (s) => s != null && s < 500,
         ),
       );

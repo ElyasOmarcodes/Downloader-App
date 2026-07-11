@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/download_task.dart';
@@ -177,6 +178,11 @@ class _ActionButtons extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.open_in_new),
               onPressed: () => OpenFilex.open(task.savePath),
+            ),
+            IconButton(
+              icon: const Icon(Icons.share_outlined),
+              onPressed: () =>
+                  Share.shareXFiles([XFile(task.savePath)], text: task.title),
             ),
             _deleteButton(context),
           ],

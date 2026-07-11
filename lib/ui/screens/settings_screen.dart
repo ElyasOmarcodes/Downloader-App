@@ -21,7 +21,7 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: Text(l.t('appName')),
-            subtitle: const Text('Version 1.1.0 • Flutter cross-platform'),
+            subtitle: const Text('Version 1.2.0 • Flutter cross-platform'),
           ),
           const Divider(),
 
@@ -37,6 +37,26 @@ class SettingsScreen extends StatelessWidget {
               items: const [
                 DropdownMenuItem(value: 'ps', child: Text('پښتو')),
                 DropdownMenuItem(value: 'en', child: Text('English')),
+              ],
+            ),
+          ),
+
+          // Theme
+          ListTile(
+            leading: const Icon(Icons.brightness_6_outlined),
+            title: Text(l.t('theme')),
+            trailing: DropdownButton<ThemeMode>(
+              value: settings.themeMode,
+              onChanged: (m) {
+                if (m != null) settings.setThemeMode(m);
+              },
+              items: [
+                DropdownMenuItem(
+                    value: ThemeMode.system, child: Text(l.t('themeSystem'))),
+                DropdownMenuItem(
+                    value: ThemeMode.light, child: Text(l.t('themeLight'))),
+                DropdownMenuItem(
+                    value: ThemeMode.dark, child: Text(l.t('themeDark'))),
               ],
             ),
           ),

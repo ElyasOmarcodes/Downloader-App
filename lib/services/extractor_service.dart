@@ -31,10 +31,16 @@ class ExtractorService {
   /// Facebook / Instagram / TikTok / Twitter / Vimeo. See README.
   String? resolverEndpoint;
 
-  Future<MediaInfo> resolve(String url) async {
+  /// Resolves [url]. When [cookie] is supplied (from the in-app browser after
+  /// the user logs in) it is forwarded to the generic extractor so gated
+  /// content can be resolved.
+  Future<MediaInfo> resolve(String url, {String? cookie}) async {
     final cleanUrl = url.trim();
     for (final ex in _extractors) {
-      if (ex.canHandle(cleanUrl)) return ex.resolve(cleanUrl);
+      if (ex.canHandle(cleanUrl)) {
+        if (ex is GenericExtractor) ex.cookie = cookie;
+        return ex.resolve(cleanUrl);
+      }
     }
 
     final source = PlatformDetector.detect(cleanUrl);

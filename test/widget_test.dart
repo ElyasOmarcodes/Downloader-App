@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:media_grab/models/media_source.dart';
-import 'package:media_grab/services/platform_detector.dart';
+import 'package:elyasomar/models/media_source.dart';
+import 'package:elyasomar/services/platform_detector.dart';
 
 void main() {
   group('PlatformDetector', () {
