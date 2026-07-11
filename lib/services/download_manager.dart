@@ -21,15 +21,30 @@ class DownloadManager {
         _maxConcurrent = maxConcurrent;
 
   final Dio _dio;
-  final int _maxConcurrent;
+  int _maxConcurrent;
+
+  /// A desktop browser UA — some CDNs (notably googlevideo) reject requests
+  /// that don't look like a browser with a 403.
+  static const _userAgent =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+      '(KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+
+  static const _maxRetries = 3;
 
   final Map<String, CancelToken> _tokens = {};
   final Set<String> _active = {};
   final List<DownloadTask> _queue = [];
+  final Map<String, int> _retries = {};
 
   TaskListener? onUpdate;
 
   bool get _hasSlot => _active.length < _maxConcurrent;
+
+  /// Adjusts how many downloads may run at once (e.g. WiFi vs mobile).
+  void setMaxConcurrent(int value) {
+    _maxConcurrent = value.clamp(1, 6);
+    _pump();
+  }
 
   /// Enqueues [task] and starts it as soon as a concurrency slot is free.
   void enqueue(DownloadTask task) {
@@ -45,6 +60,8 @@ class DownloadManager {
       }
     }
   }
+
+  bool _isGoogleVideo(String url) => url.contains('googlevideo.com');
 
   Future<void> _start(DownloadTask task) async {
     _active.add(task.id);
@@ -65,13 +82,19 @@ class DownloadManager {
       }
       task.receivedBytes = offset;
 
+      // googlevideo requires a Range header even from byte 0, otherwise it
+      // frequently answers 403 for adaptive (audio-only / video-only) streams.
+      final needsRange = offset > 0 || _isGoogleVideo(task.url);
+      final headers = <String, String>{'User-Agent': _userAgent};
+      if (needsRange) headers['Range'] = 'bytes=$offset-';
+
       final response = await _dio.get<ResponseBody>(
         task.url,
         cancelToken: token,
         options: Options(
           responseType: ResponseType.stream,
           followRedirects: true,
-          headers: offset > 0 ? {'Range': 'bytes=$offset-'} : null,
+          headers: headers,
           validateStatus: (s) => s != null && s < 400,
         ),
       );
@@ -86,7 +109,6 @@ class DownloadManager {
         mode: offset > 0 ? FileMode.append : FileMode.write,
       );
 
-      // Derive total size (content-length is the *remaining* length on a 206).
       final contentLength = int.tryParse(
               response.headers.value(Headers.contentLengthHeader) ?? '') ??
           0;
@@ -129,6 +151,7 @@ class DownloadManager {
 
       task.status = DownloadStatus.completed;
       if (task.totalBytes <= 0) task.totalBytes = task.receivedBytes;
+      _retries.remove(task.id);
       _notify(task);
       await NotificationService.instance.cancel(task.id.hashCode);
       await NotificationService.instance
@@ -139,19 +162,36 @@ class DownloadManager {
         if (task.status == DownloadStatus.downloading) {
           task.status = DownloadStatus.paused;
         }
+        _notify(task);
       } else {
-        task.status = DownloadStatus.failed;
-        task.error = e.message ?? 'Network error';
+        await _handleFailure(task, e.message ?? 'Network error');
       }
-      _notify(task);
     } catch (e) {
-      task.status = DownloadStatus.failed;
-      task.error = e.toString();
-      _notify(task);
+      await _handleFailure(task, e.toString());
     } finally {
       _active.remove(task.id);
       _tokens.remove(task.id);
       _pump();
+    }
+  }
+
+  /// Keeps the partial file and transparently retries a few times before
+  /// surfacing the failure. The partial is never deleted, so the user (or the
+  /// auto-retry) can always resume from where it stopped.
+  Future<void> _handleFailure(DownloadTask task, String message) async {
+    final attempts = (_retries[task.id] ?? 0) + 1;
+    _retries[task.id] = attempts;
+    if (attempts <= _maxRetries) {
+      task.status = DownloadStatus.queued;
+      task.error = null;
+      if (!_queue.contains(task)) _queue.add(task);
+      _notify(task);
+      // Small backoff before the queue picks it up again.
+      Future<void>.delayed(Duration(seconds: attempts * 2), _pump);
+    } else {
+      task.status = DownloadStatus.failed;
+      task.error = message;
+      _notify(task);
     }
   }
 
@@ -166,7 +206,9 @@ class DownloadManager {
   /// Resumes a paused/failed download, appending to the existing partial file.
   void resume(DownloadTask task) {
     if (task.status == DownloadStatus.downloading) return;
+    _retries.remove(task.id);
     task.status = DownloadStatus.queued;
+    task.error = null;
     if (!_queue.contains(task)) _queue.add(task);
     _notify(task);
     _pump();

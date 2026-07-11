@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/download_task.dart';
 import '../../providers/download_provider.dart';
 
-/// A single row in the downloads list with contextual actions.
+/// A single row in the downloads list with a thumbnail and contextual actions.
 class DownloadTile extends StatelessWidget {
   const DownloadTile({super.key, required this.task});
 
@@ -38,12 +39,7 @@ class DownloadTile extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  task.container == 'mp3' || task.container == 'm4a'
-                      ? Icons.audiotrack
-                      : Icons.movie,
-                  color: _statusColor(context),
-                ),
+                _Thumbnail(task: task),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -61,7 +57,9 @@ class DownloadTile extends StatelessWidget {
                           task.sourceLabel,
                           task.container.toUpperCase(),
                           task.sizeLabel,
-                        ].where((e) => e != null && e.isNotEmpty).join(' • '),
+                        ].where((e) => e != null && e!.isNotEmpty).join('  •  '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
@@ -74,6 +72,8 @@ class DownloadTile extends StatelessWidget {
             if (task.status == DownloadStatus.failed && task.error != null)
               Text(
                 task.error!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.error,
                   fontSize: 12,
@@ -101,7 +101,7 @@ class DownloadTile extends StatelessWidget {
                   const SizedBox(width: 10),
                   Text(
                     task.status == DownloadStatus.completed
-                        ? 'Done'
+                        ? AppLocalizations.of(context).t('done')
                         : task.progressLabel,
                     style: Theme.of(context).textTheme.labelSmall,
                   ),
@@ -110,6 +110,37 @@ class DownloadTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _Thumbnail extends StatelessWidget {
+  const _Thumbnail({required this.task});
+  final DownloadTask task;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final fallback = Container(
+      width: 68,
+      height: 46,
+      color: scheme.surfaceContainerHighest,
+      child: Icon(
+        task.isAudio ? Icons.audiotrack : Icons.movie,
+        color: scheme.primary,
+      ),
+    );
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: task.thumbnailUrl != null
+          ? Image.network(
+              task.thumbnailUrl!,
+              width: 68,
+              height: 46,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => fallback,
+            )
+          : fallback,
     );
   }
 }
@@ -125,7 +156,6 @@ class _ActionButtons extends StatelessWidget {
       case DownloadStatus.downloading:
         return IconButton(
           icon: const Icon(Icons.pause_circle),
-          tooltip: 'Pause',
           onPressed: () => provider.pause(task),
         );
       case DownloadStatus.paused:
@@ -135,7 +165,6 @@ class _ActionButtons extends StatelessWidget {
           children: [
             IconButton(
               icon: const Icon(Icons.play_circle),
-              tooltip: 'Resume',
               onPressed: () => provider.resume(task),
             ),
             _deleteButton(context),
@@ -147,7 +176,6 @@ class _ActionButtons extends StatelessWidget {
           children: [
             IconButton(
               icon: const Icon(Icons.open_in_new),
-              tooltip: 'Open',
               onPressed: () => OpenFilex.open(task.savePath),
             ),
             _deleteButton(context),
@@ -160,7 +188,6 @@ class _ActionButtons extends StatelessWidget {
 
   Widget _deleteButton(BuildContext context) => IconButton(
         icon: const Icon(Icons.delete_outline),
-        tooltip: 'Remove',
         onPressed: () => provider.remove(task),
       );
 }

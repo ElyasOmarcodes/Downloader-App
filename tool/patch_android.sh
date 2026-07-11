@@ -21,9 +21,19 @@ else
   # Pass the permission block through the environment so the perl program
   # itself contains no XML (the '/>' in the tags would otherwise clash with
   # the s/// delimiter). The /e flag evaluates the replacement as code.
-  export MG_PERMS=$'    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>'
+  export MG_PERMS=$'    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>'
   perl -0pi -e 's/(<manifest\b[^>]*>)/$1 . "\n" . $ENV{MG_PERMS}/e' "$MANIFEST"
   echo "Patched permissions into $MANIFEST."
+fi
+
+# --- 1b. Share-intent filter (receive_sharing_intent) ----------------------
+if grep -q 'action.SEND' "$MANIFEST"; then
+  echo "Share intent-filter already present."
+else
+  export MG_SHARE=$'        <intent-filter>\n            <action android:name="android.intent.action.SEND"/>\n            <category android:name="android.intent.category.DEFAULT"/>\n            <data android:mimeType="text/*"/>\n        </intent-filter>'
+  # Inject the SEND intent-filter just before the activity closes.
+  perl -0pi -e 's/(\s*<\/activity>)/"\n" . $ENV{MG_SHARE} . $1/e' "$MANIFEST"
+  echo "Patched share intent-filter into $MANIFEST."
 fi
 
 # --- 2. Core-library desugaring -------------------------------------------

@@ -1,7 +1,7 @@
 name: media_grab
 description: A fast, cross-platform video & audio downloader built with Flutter.
 publish_to: "none"
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -10,10 +10,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   cupertino_icons: ^1.0.6
 
   # State management
   provider: ^6.1.2
+
+  # Network type (WiFi vs mobile) for adaptive concurrency
+  connectivity_plus: ^6.0.5
+
+  # Receive links shared from other apps
+  receive_sharing_intent: ^1.8.0
 
   # Networking & downloads
   dio: ^5.4.3+1

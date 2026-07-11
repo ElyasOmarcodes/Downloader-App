@@ -32,7 +32,12 @@ extension MediaSourceX on MediaSource {
     }
   }
 
-  /// Whether a first-class extractor is implemented for this source.
-  bool get isSupported =>
+  /// Whether the app will attempt to resolve this source. YouTube and direct
+  /// files have first-class resolvers; the social platforms are resolved
+  /// best-effort on-device by the generic extractor.
+  bool get isSupported => this != MediaSource.unknown;
+
+  /// True only for the fully-reliable, first-class resolvers.
+  bool get isFirstClass =>
       this == MediaSource.youtube || this == MediaSource.directFile;
 }

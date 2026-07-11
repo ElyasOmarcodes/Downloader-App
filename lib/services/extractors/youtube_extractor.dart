@@ -3,6 +3,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt;
 import '../../models/media_format.dart';
 import '../../models/media_info.dart';
 import '../../models/media_source.dart';
+import '../../models/subtitle_track.dart';
 import '../platform_detector.dart';
 import 'extractor.dart';
 
@@ -21,8 +22,27 @@ class YoutubeExtractor implements Extractor {
   Future<MediaInfo> resolve(String url) async {
     try {
       final video = await _yt.videos.get(url);
-      final manifest =
-          await _yt.videos.streamsClient.getManifest(video.id);
+      // Start both requests in parallel to keep link resolution fast; the
+      // caption fetch is optional so we swallow its errors.
+      final manifestFuture = _yt.videos.streamsClient.getManifest(video.id);
+      final captionsFuture = _yt.videos.closedCaptions
+          .getManifest(video.id)
+          .then<yt.ClosedCaptionManifest?>((m) => m)
+          .catchError((_) => null);
+
+      final manifest = await manifestFuture;
+
+      final subtitles = <SubtitleTrack>[];
+      final captions = await captionsFuture;
+      if (captions != null) {
+        for (final track in captions.tracks) {
+          subtitles.add(SubtitleTrack(
+            label: track.language.name,
+            url: track.url.toString(),
+            ext: 'vtt',
+          ));
+        }
+      }
 
       final formats = <MediaFormat>[];
 
@@ -87,6 +107,7 @@ class YoutubeExtractor implements Extractor {
         thumbnailUrl: video.thumbnails.highResUrl,
         durationSeconds: video.duration?.inSeconds,
         formats: formats,
+        subtitles: subtitles,
       );
     } on yt.VideoUnavailableException {
       throw ExtractionException('This video is unavailable or private.');

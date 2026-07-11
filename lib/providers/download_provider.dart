@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -8,12 +10,14 @@ import '../models/download_task.dart';
 import '../models/media_format.dart';
 import '../models/media_info.dart';
 import '../models/media_source.dart';
+import '../services/connectivity_service.dart';
 import '../services/download_manager.dart';
 import '../services/extractor_service.dart';
+import '../services/settings_service.dart';
 import '../services/storage_service.dart';
 
 /// Owns the app's runtime state: resolving links, managing the download
-/// queue, and persisting everything.
+/// queue, folder layout, and persistence.
 class DownloadProvider extends ChangeNotifier {
   DownloadProvider({
     ExtractorService? extractor,
@@ -25,9 +29,19 @@ class DownloadProvider extends ChangeNotifier {
 
   final ExtractorService _extractor;
   final DownloadManager _manager;
+  final Dio _dio = Dio();
 
   final List<DownloadTask> _tasks = [];
   List<DownloadTask> get tasks => List.unmodifiable(_tasks.reversed);
+
+  /// Active or paused (not yet complete) downloads — shown as a sub-list.
+  List<DownloadTask> get activeTasks => tasks
+      .where((t) => t.status != DownloadStatus.completed)
+      .toList();
+
+  /// Finished downloads.
+  List<DownloadTask> get completedTasks =>
+      tasks.where((t) => t.status == DownloadStatus.completed).toList();
 
   bool _resolving = false;
   bool get isResolving => _resolving;
@@ -38,10 +52,15 @@ class DownloadProvider extends ChangeNotifier {
   MediaInfo? _lastResolved;
   MediaInfo? get lastResolved => _lastResolved;
 
+  /// Emits resolved media that the UI should present a download sheet for
+  /// (used by share-intent and clipboard auto-detection).
+  final StreamController<MediaInfo> _autoSheet =
+      StreamController<MediaInfo>.broadcast();
+  Stream<MediaInfo> get autoSheetStream => _autoSheet.stream;
+
   Future<void> loadPersisted() async {
     final saved = await StorageService.instance.loadTasks();
     for (final t in saved) {
-      // Anything left mid-flight is treated as paused so the user can resume.
       if (t.status == DownloadStatus.downloading ||
           t.status == DownloadStatus.queued) {
         t.status = DownloadStatus.paused;
@@ -53,8 +72,7 @@ class DownloadProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Resolves a pasted URL into [MediaInfo]. Returns null on failure and sets
-  /// [resolveError].
+  /// Resolves a pasted URL into [MediaInfo]. Returns null on failure.
   Future<MediaInfo?> resolve(String url) async {
     _resolving = true;
     _resolveError = null;
@@ -72,42 +90,70 @@ class DownloadProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> _ensureStoragePermission() async {
-    if (!Platform.isAndroid) return true;
-    // On modern Android, app-scoped storage needs no runtime permission; we
-    // still request notifications elsewhere. Media store writes are handled
-    // by saving into the app documents dir which is always writable.
-    final status = await Permission.notification.request();
-    return status.isGranted || status.isLimited || status.isDenied;
+  /// Resolves [url] coming from a share intent or the clipboard and, on
+  /// success, asks the UI (via [autoSheetStream]) to present the sheet.
+  Future<void> autoResolve(String url) async {
+    final info = await resolve(url);
+    if (info != null) _autoSheet.add(info);
   }
 
-  Future<Directory> _downloadDir() async {
-    Directory base;
-    if (Platform.isAndroid) {
-      base = await getApplicationDocumentsDirectory();
-    } else {
-      base = await getDownloadsDirectory() ??
-          await getApplicationDocumentsDirectory();
+  // ---------------------------------------------------------------------------
+  // Storage layout: <primary storage>/MediaGrab/{Video,Audio}
+  // ---------------------------------------------------------------------------
+  Future<void> _ensurePermissions() async {
+    if (!Platform.isAndroid) return;
+    await Permission.notification.request();
+    // All-files access lets us write into a public /MediaGrab folder on
+    // Android 11+. If the user declines we fall back to app-scoped storage.
+    if (await Permission.manageExternalStorage.isDenied) {
+      await Permission.manageExternalStorage.request();
     }
-    final dir = Directory('${base.path}/MediaGrab');
-    if (!await dir.exists()) await dir.create(recursive: true);
+  }
+
+  Future<Directory> _mediaDir({required bool isAudio}) async {
+    final sub = isAudio ? 'Audio' : 'Video';
+    if (Platform.isAndroid) {
+      try {
+        final ext = await getExternalStorageDirectory();
+        if (ext != null) {
+          // .../Android/data/<pkg>/files -> take the primary-storage root.
+          final root = ext.path.split('/Android/').first; // /storage/emulated/0
+          final dir = Directory('$root/MediaGrab/$sub');
+          await dir.create(recursive: true);
+          return dir;
+        }
+      } catch (_) {
+        // Fall through to app-scoped storage.
+      }
+    }
+    final base = Platform.isAndroid
+        ? await getApplicationDocumentsDirectory()
+        : (await getDownloadsDirectory() ??
+            await getApplicationDocumentsDirectory());
+    final dir = Directory('${base.path}/MediaGrab/$sub');
+    await dir.create(recursive: true);
     return dir;
   }
 
   String _sanitize(String name) =>
       name.replaceAll(RegExp(r'[^\w\s.-]'), '_').trim();
 
-  /// Queues a download for [format] from the currently resolved [info].
-  Future<void> download(MediaInfo info, MediaFormat format) async {
-    await _ensureStoragePermission();
-    final dir = await _downloadDir();
+  /// Queues a download for [format] and, optionally, its subtitles.
+  Future<void> download(
+    MediaInfo info,
+    MediaFormat format, {
+    bool withSubtitles = false,
+  }) async {
+    await _ensurePermissions();
+    await _applyConcurrency();
+
+    final isAudio = format.kind == MediaKind.audio || format.audioOnlyMp3;
+    final dir = await _mediaDir(isAudio: isAudio);
     final id = DateTime.now().microsecondsSinceEpoch.toString();
     final safeTitle = _sanitize(info.title);
     final ext = format.audioOnlyMp3 ? 'm4a' : format.container;
-    // NOTE: we save the source audio container. True MP3 transcoding requires
-    // an ffmpeg step; the file is tagged so a post-process can convert it.
-    final fileName = '$safeTitle-${format.displayQuality}.$ext';
-    final savePath = '${dir.path}/${_sanitize(fileName)}';
+    final fileName = _sanitize('$safeTitle-${format.displayQuality}.$ext');
+    final savePath = '${dir.path}/$fileName';
 
     final task = DownloadTask.fromFormat(
       id: id,
@@ -116,18 +162,43 @@ class DownloadProvider extends ChangeNotifier {
       savePath: savePath,
       thumbnailUrl: info.thumbnailUrl,
       sourceLabel: info.source.label,
+      isAudio: isAudio,
     );
     _tasks.add(task);
     notifyListeners();
     _persist();
     _manager.enqueue(task);
+
+    if (withSubtitles && info.hasSubtitles) {
+      unawaited(_downloadSubtitle(info, dir, safeTitle));
+    }
   }
 
-  void pause(DownloadTask task) {
-    _manager.pause(task);
+  /// Saves the first subtitle track as a sidecar file next to the media.
+  Future<void> _downloadSubtitle(
+      MediaInfo info, Directory dir, String safeTitle) async {
+    try {
+      final sub = info.subtitles.first;
+      final path = '${dir.path}/${_sanitize('$safeTitle.${sub.ext}')}';
+      await _dio.download(sub.url, path);
+    } catch (_) {
+      // Subtitles are best-effort; ignore failures.
+    }
   }
+
+  /// Sets the manager's concurrency from settings + current network type.
+  Future<void> _applyConcurrency() async {
+    final onWifi = await ConnectivityService.instance.isWifi();
+    final limit = onWifi
+        ? SettingsService.instance.wifiConcurrency
+        : SettingsService.instance.mobileConcurrency;
+    _manager.setMaxConcurrent(limit);
+  }
+
+  void pause(DownloadTask task) => _manager.pause(task);
 
   void resume(DownloadTask task) {
+    _applyConcurrency();
     _manager.resume(task);
   }
 
@@ -154,12 +225,11 @@ class DownloadProvider extends ChangeNotifier {
     _persist();
   }
 
-  void _persist() {
-    StorageService.instance.saveTasks(_tasks);
-  }
+  void _persist() => StorageService.instance.saveTasks(_tasks);
 
   @override
   void dispose() {
+    _autoSheet.close();
     _extractor.dispose();
     super.dispose();
   }

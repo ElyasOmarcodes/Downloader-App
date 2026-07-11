@@ -31,6 +31,7 @@ class DownloadTask {
     this.receivedBytes = 0,
     this.status = DownloadStatus.queued,
     this.error,
+    this.isAudio = false,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -45,6 +46,9 @@ class DownloadTask {
   final String container;
   final String? thumbnailUrl;
   final String? sourceLabel;
+
+  /// Whether this is an audio-only download (drives which folder it lands in).
+  final bool isAudio;
 
   int totalBytes;
 
@@ -85,6 +89,7 @@ class DownloadTask {
         'receivedBytes': receivedBytes,
         'status': status.name,
         'error': error,
+        'isAudio': isAudio,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -100,6 +105,7 @@ class DownloadTask {
         receivedBytes: json['receivedBytes'] as int? ?? 0,
         status: DownloadStatus.values.byName(json['status'] as String),
         error: json['error'] as String?,
+        isAudio: json['isAudio'] as bool? ?? false,
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
       );
 
@@ -110,6 +116,7 @@ class DownloadTask {
     required String savePath,
     String? thumbnailUrl,
     String? sourceLabel,
+    bool isAudio = false,
   }) {
     return DownloadTask(
       id: id,
@@ -119,6 +126,7 @@ class DownloadTask {
       container: format.container,
       thumbnailUrl: thumbnailUrl,
       sourceLabel: sourceLabel,
+      isAudio: isAudio,
       totalBytes: format.sizeBytes ?? 0,
     );
   }

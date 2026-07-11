@@ -4,6 +4,7 @@ import '../models/media_info.dart';
 import '../models/media_source.dart';
 import 'extractors/direct_file_extractor.dart';
 import 'extractors/extractor.dart';
+import 'extractors/generic_extractor.dart';
 import 'extractors/youtube_extractor.dart';
 import 'platform_detector.dart';
 
@@ -19,6 +20,7 @@ class ExtractorService {
     _extractors = [
       YoutubeExtractor(),
       DirectFileExtractor(_dio),
+      GenericExtractor(_dio),
     ];
   }
 

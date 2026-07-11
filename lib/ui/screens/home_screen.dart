@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/media_info.dart';
 import '../../models/media_source.dart';
 import '../../providers/download_provider.dart';
@@ -44,14 +45,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _resolve() async {
     FocusScope.of(context).unfocus();
+    final l = AppLocalizations.of(context);
     final provider = context.read<DownloadProvider>();
     final info = await provider.resolve(_controller.text.trim());
     if (!mounted) return;
     if (info != null) {
       _showFormats(info);
-    } else if (provider.resolveError != null) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(provider.resolveError!)),
+        SnackBar(content: Text(provider.resolveError ?? l.t('unrecognizedLink'))),
       );
     }
   }
@@ -67,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final provider = context.watch<DownloadProvider>();
     final scheme = Theme.of(context).colorScheme;
 
@@ -76,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(Icons.download_for_offline, color: scheme.primary),
             const SizedBox(width: 8),
-            const Text('MediaGrab'),
+            Text(l.t('appName')),
           ],
         ),
       ),
@@ -85,10 +88,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Paste a video link',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text(l.t('pasteLink'),
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             TextField(
               controller: _controller,
@@ -98,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 hintText: 'https://…',
                 prefixIcon: const Icon(Icons.link),
                 suffixIcon: IconButton(
-                  tooltip: 'Paste',
+                  tooltip: l.t('paste'),
                   icon: const Icon(Icons.content_paste),
                   onPressed: _paste,
                 ),
@@ -117,10 +118,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.search),
-              label: Text(provider.isResolving ? 'Resolving…' : 'Fetch media'),
+              label: Text(provider.isResolving ? l.t('resolving') : l.t('fetch')),
             ),
             const SizedBox(height: 28),
-            _SupportedPlatforms(),
+            _SupportedPlatforms(label: l.t('platforms')),
           ],
         ),
       ),
@@ -134,29 +135,29 @@ class _SourceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final supported = source.isSupported;
+    final firstClass = source.isFirstClass;
     return Chip(
       avatar: Icon(
-        supported ? Icons.check_circle : Icons.info_outline,
+        Icons.check_circle,
         size: 18,
-        color: supported ? Colors.green : Colors.orange,
+        color: firstClass ? Colors.green : Colors.blue,
       ),
-      label: Text(
-        supported
-            ? '${source.label} • supported'
-            : '${source.label} • needs resolver backend',
-      ),
+      label: Text(source.label),
     );
   }
 }
 
 class _SupportedPlatforms extends StatelessWidget {
+  const _SupportedPlatforms({required this.label});
+  final String label;
+
   static const _items = [
-    ('YouTube', Icons.play_circle_fill, true),
-    ('Facebook', Icons.facebook, false),
-    ('Instagram', Icons.camera_alt, false),
-    ('TikTok', Icons.music_note, false),
-    ('Direct links', Icons.insert_link, true),
+    ('YouTube', Icons.play_circle_fill),
+    ('Facebook', Icons.facebook),
+    ('Instagram', Icons.camera_alt),
+    ('TikTok', Icons.music_note),
+    ('X', Icons.close),
+    ('Vimeo', Icons.videocam),
   ];
 
   @override
@@ -164,13 +165,13 @@ class _SupportedPlatforms extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Platforms', style: Theme.of(context).textTheme.titleMedium),
+        Text(label, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
         Wrap(
           spacing: 10,
           runSpacing: 10,
           children: [
-            for (final (name, icon, ok) in _items)
+            for (final (name, icon) in _items)
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -187,12 +188,6 @@ class _SupportedPlatforms extends StatelessWidget {
                     Icon(icon, size: 18),
                     const SizedBox(width: 6),
                     Text(name),
-                    const SizedBox(width: 4),
-                    Icon(
-                      ok ? Icons.check_circle : Icons.hourglass_bottom,
-                      size: 14,
-                      color: ok ? Colors.green : Colors.orange,
-                    ),
                   ],
                 ),
               ),

@@ -1,5 +1,6 @@
 import 'media_format.dart';
 import 'media_source.dart';
+import 'subtitle_track.dart';
 
 /// The resolved metadata + available formats for a given media URL.
 class MediaInfo {
@@ -11,6 +12,7 @@ class MediaInfo {
     this.author,
     this.thumbnailUrl,
     this.durationSeconds,
+    this.subtitles = const [],
   });
 
   final String sourceUrl;
@@ -19,6 +21,11 @@ class MediaInfo {
   final String? author;
   final String? thumbnailUrl;
   final int? durationSeconds;
+
+  /// Available subtitle tracks (may be empty).
+  final List<SubtitleTrack> subtitles;
+
+  bool get hasSubtitles => subtitles.isNotEmpty;
 
   /// All downloadable formats, typically sorted best-first by the extractor.
   final List<MediaFormat> formats;
