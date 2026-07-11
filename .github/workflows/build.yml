@@ -72,6 +72,9 @@ jobs:
   windows:
     needs: test
     runs-on: windows-latest
+    # Non-fatal: desktop builds depend on the runner's Visual Studio toolchain
+    # and must never block the Android APK or the release.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2

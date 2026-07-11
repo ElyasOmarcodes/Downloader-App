@@ -18,8 +18,11 @@ fi
 if grep -q "android.permission.INTERNET" "$MANIFEST"; then
   echo "Permissions already present."
 else
-  PERMS='    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>'
-  perl -0pi -e "s/(<manifest[^>]*>)/\$1\n$PERMS/" "$MANIFEST"
+  # Pass the permission block through the environment so the perl program
+  # itself contains no XML (the '/>' in the tags would otherwise clash with
+  # the s/// delimiter). The /e flag evaluates the replacement as code.
+  export MG_PERMS=$'    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>'
+  perl -0pi -e 's/(<manifest\b[^>]*>)/$1 . "\n" . $ENV{MG_PERMS}/e' "$MANIFEST"
   echo "Patched permissions into $MANIFEST."
 fi
 
