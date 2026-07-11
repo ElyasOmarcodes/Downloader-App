@@ -8,11 +8,13 @@ on:
   workflow_dispatch:
 
 env:
-  FLUTTER_VERSION: "3.24.5"
+  # 3.27.x reliably detects Visual Studio 2022 on the windows-latest runner
+  # (3.24.x fell back to the missing "VS 16 2019" generator).
+  FLUTTER_VERSION: "3.27.4"
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Analyze + unit tests
+  # Analyze + unit tests (fast gate — fails on real compile errors)
   # ---------------------------------------------------------------------------
   test:
     runs-on: ubuntu-latest
@@ -26,7 +28,9 @@ jobs:
       - name: Scaffold native platform folders
         run: flutter create --platforms=android --org com.mediagrab --project-name media_grab .
       - run: flutter pub get
-      - run: flutter analyze || true
+      # Fail on ERROR-severity issues only, so real compile errors are caught
+      # here (cheaply) before the slow platform builds run.
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
       - run: flutter test
 
   # ---------------------------------------------------------------------------
@@ -67,13 +71,45 @@ jobs:
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
+  # iOS (unsigned .ipa — installable via AltStore / Sideloadly, no Apple account)
+  # ---------------------------------------------------------------------------
+  ios:
+    needs: test
+    runs-on: macos-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Scaffold iOS project
+        run: flutter create --platforms=ios --org com.mediagrab --project-name media_grab .
+      - run: flutter pub get
+      - name: Build iOS (no code signing)
+        run: flutter build ios --release --no-codesign
+      - name: Package unsigned IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r mediagrab-unsigned.ipa Payload >/dev/null
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mediagrab-ios
+          path: build/ios/iphoneos/mediagrab-unsigned.ipa
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
   # Windows desktop build
   # ---------------------------------------------------------------------------
   windows:
     needs: test
     runs-on: windows-latest
     # Non-fatal: desktop builds depend on the runner's Visual Studio toolchain
-    # and must never block the Android APK or the release.
+    # and must never block the Android APK, iOS build, or the release.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -85,6 +121,8 @@ jobs:
       - name: Scaffold Windows project
         run: flutter create --platforms=windows --org com.mediagrab --project-name media_grab .
       - run: flutter pub get
+      - name: Diagnose toolchain
+        run: flutter doctor -v
       - run: flutter build windows --release
       - name: Zip Windows build
         run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath mediagrab-windows.zip
@@ -98,7 +136,7 @@ jobs:
   # Publish a GitHub Release with the installable files on version tags
   # ---------------------------------------------------------------------------
   release:
-    needs: [android, windows]
+    needs: [android, ios, windows]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:

@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../models/download_task.dart';
 import '../models/media_format.dart';
 import '../models/media_info.dart';
+import '../models/media_source.dart';
 import '../services/download_manager.dart';
 import '../services/extractor_service.dart';
 import '../services/storage_service.dart';

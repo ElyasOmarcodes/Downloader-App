@@ -53,4 +53,7 @@ class DirectFileExtractor implements Extractor {
       ],
     );
   }
+
+  @override
+  void dispose() {}
 }
