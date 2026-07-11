@@ -41,8 +41,8 @@ dependencies:
   # Notifications (download progress)
   flutter_local_notifications: ^17.1.2
 
-  # Utilities
-  intl: ^0.19.0
+  # Utilities (intl is provided transitively by flutter_localizations; not
+  # pinned here to avoid version conflicts across Flutter releases)
   share_plus: ^9.0.0
 
 dev_dependencies:

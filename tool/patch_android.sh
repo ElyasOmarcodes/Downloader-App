@@ -56,3 +56,32 @@ dependencies {
 EOF
   echo "Enabled core-library desugaring in $GRADLE."
 fi
+
+# --- 3. Align JVM target to 17 across all modules -------------------------
+# Some plugins (e.g. receive_sharing_intent) compile Kotlin at JVM 17 while the
+# Flutter template defaults Java to 1.8, which Gradle rejects. Force every
+# module to Java/Kotlin 17.
+ROOT_GRADLE="android/build.gradle"
+if [[ -f "$ROOT_GRADLE" ]] && ! grep -q "MediaGrab JVM 17" "$ROOT_GRADLE"; then
+  cat >> "$ROOT_GRADLE" <<'EOF'
+
+// MediaGrab JVM 17 alignment: keep Java and Kotlin on the same target so
+// plugins compiled at 17 don't clash with a Java 1.8 default.
+subprojects {
+    afterEvaluate { project ->
+        if (project.extensions.findByName("android") != null) {
+            project.extensions.getByName("android").compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+        }
+        project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
+}
+EOF
+  echo "Appended JVM 17 alignment to $ROOT_GRADLE."
+fi
