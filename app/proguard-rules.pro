@@ -3,9 +3,13 @@
 -keep class com.android.apksig.** { *; }
 -dontwarn com.android.apksig.**
 
-# Conscrypt / BouncyCastle providers referenced by the signing stack are optional.
--dontwarn org.conscrypt.**
+# BouncyCastle powers certificate generation (keystore creation) and JAR/CMS
+# signing (AAB). It resolves some algorithms reflectively, so keep it intact.
+-keep class org.bouncycastle.** { *; }
 -dontwarn org.bouncycastle.**
+
+# Conscrypt providers referenced by the signing stack are optional.
+-dontwarn org.conscrypt.**
 -dontwarn org.openjsse.**
 
 # Optional compile-time annotations referenced by apksig / Guava-style code.

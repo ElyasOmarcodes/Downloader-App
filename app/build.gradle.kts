@@ -65,6 +65,11 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "/META-INF/DEPENDENCIES"
             excludes += "/META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+            // BouncyCastle ships as a signed jar; its signature metadata is not
+            // needed in the app and can otherwise collide during packaging.
+            excludes += "/META-INF/*.SF"
+            excludes += "/META-INF/*.DSA"
+            excludes += "/META-INF/*.RSA"
         }
     }
 }
@@ -91,6 +96,10 @@ dependencies {
 
     // Official Android APK signing library (the engine behind apksigner)
     implementation(libs.apksig)
+
+    // Certificate generation (keystore creation) and JAR/CMS signing (AAB)
+    implementation(libs.bouncycastle.prov)
+    implementation(libs.bouncycastle.pkix)
 
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 

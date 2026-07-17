@@ -8,6 +8,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,7 +22,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,12 +29,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,9 +55,9 @@ import com.elyasomar.apksigner.ui.icons.AppIcons
 import com.elyasomar.apksigner.ui.signer.components.InfoRow
 import com.elyasomar.apksigner.ui.signer.components.SectionCard
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignerScreen(
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     viewModel: SignerViewModel = hiltViewModel(),
 ) {
@@ -68,7 +65,7 @@ fun SignerScreen(
     val context = LocalContext.current
     val scrollState = rememberScrollState()
 
-    val apkLauncher = rememberLauncherForActivityResult(
+    val artifactLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri: Uri? -> uri?.let(viewModel::onApkSelected) }
 
@@ -87,127 +84,122 @@ fun SignerScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                ),
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(scrollState)
+            .padding(contentPadding)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        AnimatedVisibility(visible = state.isSigning) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+
+        SectionCard(title = stringResource(R.string.section_apk), icon = AppIcons.Android) {
+            DocumentRow(
+                fileName = state.apk?.displayName,
+                placeholder = stringResource(R.string.placeholder_no_apk),
             )
-        },
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxWidth()
-                .verticalScroll(scrollState)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            Spacer(Modifier.height(12.dp))
+            FilledTonalButton(
+                onClick = { artifactLauncher.launch(arrayOf("*/*")) },
+                enabled = !state.isSigning,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.action_select_apk)) }
+        }
+
+        SectionCard(title = stringResource(R.string.section_keystore), icon = AppIcons.Key) {
+            DocumentRow(
+                fileName = state.keystore?.displayName,
+                placeholder = stringResource(R.string.placeholder_no_keystore),
+            )
+            Spacer(Modifier.height(12.dp))
+            FilledTonalButton(
+                onClick = { keystoreLauncher.launch(arrayOf("*/*")) },
+                enabled = !state.isSigning,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.action_select_keystore)) }
+        }
+
+        SectionCard(
+            title = stringResource(R.string.section_credentials),
+            icon = AppIcons.Lock,
         ) {
-            AnimatedVisibility(visible = state.isSigning) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
+            CredentialFields(
+                state = state,
+                onKeystorePasswordChanged = viewModel::onKeystorePasswordChanged,
+                onKeyAliasChanged = viewModel::onKeyAliasChanged,
+                onKeyPasswordChanged = viewModel::onKeyPasswordChanged,
+            )
+        }
 
-            SectionCard(title = stringResource(R.string.section_apk), icon = AppIcons.Android) {
-                DocumentRow(
-                    fileName = state.apk?.displayName,
-                    placeholder = stringResource(R.string.placeholder_no_apk),
+        SectionCard(
+            title = stringResource(R.string.section_signature_versions),
+            icon = AppIcons.Shield,
+        ) {
+            if (state.isBundleSelected) {
+                Text(
+                    text = stringResource(R.string.note_aab_scheme),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(12.dp))
-                FilledTonalButton(
-                    onClick = { apkLauncher.launch(arrayOf("*/*")) },
-                    enabled = !state.isSigning,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.action_select_apk)) }
-            }
-
-            SectionCard(title = stringResource(R.string.section_keystore), icon = AppIcons.Key) {
-                DocumentRow(
-                    fileName = state.keystore?.displayName,
-                    placeholder = stringResource(R.string.placeholder_no_keystore),
-                )
-                Spacer(Modifier.height(12.dp))
-                FilledTonalButton(
-                    onClick = { keystoreLauncher.launch(arrayOf("*/*")) },
-                    enabled = !state.isSigning,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.action_select_keystore)) }
-            }
-
-            SectionCard(
-                title = stringResource(R.string.section_credentials),
-                icon = AppIcons.Lock,
-            ) {
-                CredentialFields(
-                    state = state,
-                    onKeystorePasswordChanged = viewModel::onKeystorePasswordChanged,
-                    onKeyAliasChanged = viewModel::onKeyAliasChanged,
-                    onKeyPasswordChanged = viewModel::onKeyPasswordChanged,
-                )
-            }
-
-            SectionCard(
-                title = stringResource(R.string.section_signature_versions),
-                icon = AppIcons.Shield,
-            ) {
+            } else {
                 SignatureVersionSelector(
                     versions = state.versions,
                     enabled = !state.isSigning,
                     onVersionsChanged = viewModel::onVersionsChanged,
                 )
             }
-
-            SectionCard(
-                title = stringResource(R.string.section_output),
-                icon = AppIcons.Folder,
-            ) {
-                DocumentRow(
-                    fileName = state.outputFolder?.displayName,
-                    placeholder = stringResource(R.string.placeholder_no_output),
-                )
-                Spacer(Modifier.height(12.dp))
-                FilledTonalButton(
-                    onClick = { outputLauncher.launch(null) },
-                    enabled = !state.isSigning,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.action_select_output)) }
-            }
-
-            Button(
-                onClick = viewModel::sign,
-                enabled = state.canSign,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-            ) {
-                if (state.isSigning) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(stringResource(R.string.action_signing))
-                } else {
-                    Text(stringResource(R.string.action_sign))
-                }
-            }
-
-            state.errorMessage?.let { message ->
-                ErrorCard(message = message, onDismiss = viewModel::onErrorDismissed)
-            }
-
-            state.result?.let { result ->
-                SuccessCard(fileName = result.outputFileName)
-                ApkInfoCard(info = result.apkInfo)
-                CertificateInfoCard(info = result.certificateInfo)
-            }
-
-            Spacer(Modifier.height(8.dp))
         }
+
+        SectionCard(
+            title = stringResource(R.string.section_output),
+            icon = AppIcons.Folder,
+        ) {
+            DocumentRow(
+                fileName = state.outputFolder?.displayName,
+                placeholder = stringResource(R.string.placeholder_no_output),
+            )
+            Spacer(Modifier.height(12.dp))
+            FilledTonalButton(
+                onClick = { outputLauncher.launch(null) },
+                enabled = !state.isSigning,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.action_select_output)) }
+        }
+
+        Button(
+            onClick = viewModel::sign,
+            enabled = state.canSign,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+        ) {
+            if (state.isSigning) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(stringResource(R.string.action_signing))
+            } else {
+                Text(stringResource(R.string.action_sign))
+            }
+        }
+
+        state.errorMessage?.let { message ->
+            ErrorCard(message = message, onDismiss = viewModel::onErrorDismissed)
+        }
+
+        state.result?.let { result ->
+            SuccessCard(fileName = result.outputFileName)
+            result.apkInfo?.let { ApkInfoCard(info = it) }
+            CertificateInfoCard(info = result.certificateInfo)
+        }
+
+        Spacer(Modifier.height(8.dp))
     }
 }
 

@@ -87,6 +87,28 @@ class DocumentStorage @Inject constructor(
         return created.name ?: displayName
     }
 
+    /**
+     * Writes raw [bytes] into the SAF tree [treeUri] under [displayName],
+     * replacing any existing file of the same name, and returns the final name.
+     */
+    fun writeBytesToTree(treeUri: Uri, bytes: ByteArray, displayName: String): String {
+        val tree = DocumentFile.fromTreeUri(context, treeUri)
+            ?: throw SigningException("The selected output folder is not accessible.")
+        if (!tree.canWrite()) {
+            throw SigningException("The app cannot write to the selected output folder.")
+        }
+
+        tree.findFile(displayName)?.delete()
+        val created = tree.createFile(mimeFor(displayName), displayName)
+            ?: throw SigningException("Could not create the output file.")
+
+        context.contentResolver.openOutputStream(created.uri)?.use { output ->
+            output.write(bytes)
+        } ?: throw SigningException("Could not write to the output file.")
+
+        return created.name ?: displayName
+    }
+
     private fun mimeFor(fileName: String): String =
         if (fileName.endsWith(".apk", ignoreCase = true)) mimeApk else "application/octet-stream"
 }

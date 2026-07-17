@@ -10,6 +10,7 @@ composeBom = "2024.09.03"
 hiltNavigationCompose = "1.2.0"
 documentfile = "1.0.1"
 apksig = "8.6.1"
+bouncycastle = "1.78.1"
 desugarJdkLibs = "2.1.2"
 junit = "4.13.2"
 androidxJunit = "1.2.1"
@@ -32,6 +33,8 @@ androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navig
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 apksig = { group = "com.android.tools.build", name = "apksig", version.ref = "apksig" }
+bouncycastle-prov = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bouncycastle" }
+bouncycastle-pkix = { group = "org.bouncycastle", name = "bcpkix-jdk18on", version.ref = "bouncycastle" }
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxJunit" }

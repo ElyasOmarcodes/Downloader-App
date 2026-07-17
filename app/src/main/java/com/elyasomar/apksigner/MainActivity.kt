@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.elyasomar.apksigner.ui.signer.SignerScreen
+import com.elyasomar.apksigner.ui.AppRoot
 import com.elyasomar.apksigner.ui.theme.ApkSignerTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    SignerScreen()
+                    AppRoot()
                 }
             }
         }

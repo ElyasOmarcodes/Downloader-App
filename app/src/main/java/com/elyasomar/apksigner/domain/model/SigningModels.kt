@@ -43,9 +43,22 @@ data class CertificateInfo(
     val isCurrentlyValid: Boolean,
 )
 
-/** Outcome of a completed signing operation. */
+/** The kind of artifact being signed, which selects the signing scheme. */
+enum class ArtifactType {
+    /** Android application package — signed with apksig (v1–v4). */
+    APK,
+
+    /** Android App Bundle — signed with a JAR (v1) signature. */
+    AAB,
+}
+
+/**
+ * Outcome of a completed signing operation. [apkInfo] is only available for
+ * APKs; app bundles carry a protobuf manifest that is not parsed here.
+ */
 data class SigningSuccess(
     val outputFileName: String,
-    val apkInfo: ApkInfo,
+    val artifactType: ArtifactType,
+    val apkInfo: ApkInfo?,
     val certificateInfo: CertificateInfo,
 )

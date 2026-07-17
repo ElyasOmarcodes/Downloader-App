@@ -23,6 +23,10 @@ data class SignerUiState(
     val result: SigningSuccess? = null,
     val errorMessage: String? = null,
 ) {
+    /** True when the selected artifact is an app bundle (.aab) rather than an APK. */
+    val isBundleSelected: Boolean
+        get() = apk?.displayName?.endsWith(".aab", ignoreCase = true) == true
+
     /** Whether the form holds everything required to start signing. */
     val canSign: Boolean
         get() = !isSigning &&
@@ -30,5 +34,5 @@ data class SignerUiState(
             keystore != null &&
             outputFolder != null &&
             keystorePassword.isNotEmpty() &&
-            versions.hasAnyEnabled
+            (isBundleSelected || versions.hasAnyEnabled)
 }

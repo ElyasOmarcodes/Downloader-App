@@ -1,6 +1,8 @@
 package com.elyasomar.apksigner.di
 
+import com.elyasomar.apksigner.data.repository.KeystoreRepositoryImpl
 import com.elyasomar.apksigner.data.repository.SigningRepositoryImpl
+import com.elyasomar.apksigner.domain.repository.KeystoreRepository
 import com.elyasomar.apksigner.domain.repository.SigningRepository
 import dagger.Binds
 import dagger.Module
@@ -15,4 +17,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSigningRepository(impl: SigningRepositoryImpl): SigningRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindKeystoreRepository(impl: KeystoreRepositoryImpl): KeystoreRepository
 }

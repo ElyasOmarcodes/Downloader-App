@@ -68,7 +68,7 @@ class SignerViewModel @Inject constructor(
         val state = _uiState.value
         if (!state.canSign) return
 
-        if (!state.versions.isV4Satisfied) {
+        if (!state.isBundleSelected && !state.versions.isV4Satisfied) {
             _uiState.update {
                 it.copy(errorMessage = "V4 signing requires V2 or V3 to be enabled.")
             }
