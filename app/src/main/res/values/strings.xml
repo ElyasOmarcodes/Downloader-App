@@ -1,0 +1,55 @@
+<resources>
+    <string name="app_name">APK Signer</string>
+
+    <!-- Sections -->
+    <string name="section_apk">APK File</string>
+    <string name="section_keystore">Keystore</string>
+    <string name="section_credentials">Credentials</string>
+    <string name="section_signature_versions">Signature Versions</string>
+    <string name="section_output">Output Folder</string>
+    <string name="section_apk_info">APK Information</string>
+    <string name="section_certificate_info">Certificate Information</string>
+
+    <!-- Actions -->
+    <string name="action_select_apk">Select APK</string>
+    <string name="action_select_keystore">Select Keystore (JKS / PKCS12)</string>
+    <string name="action_select_output">Select Output Folder</string>
+    <string name="action_sign">Sign APK</string>
+    <string name="action_signing">Signing…</string>
+    <string name="action_dismiss">Dismiss</string>
+
+    <!-- Fields -->
+    <string name="field_keystore_password">Keystore Password</string>
+    <string name="field_key_alias">Key Alias</string>
+    <string name="field_key_password">Key Password (optional)</string>
+    <string name="field_key_password_hint">Leave empty to reuse the keystore password</string>
+
+    <!-- Placeholders -->
+    <string name="placeholder_no_apk">No APK selected</string>
+    <string name="placeholder_no_keystore">No keystore selected</string>
+    <string name="placeholder_no_output">No output folder selected</string>
+
+    <!-- Labels -->
+    <string name="label_package">Package</string>
+    <string name="label_version">Version</string>
+    <string name="label_min_sdk">Min SDK</string>
+    <string name="label_subject">Subject</string>
+    <string name="label_issuer">Issuer</string>
+    <string name="label_sha256">SHA-256</string>
+    <string name="label_serial">Serial</string>
+    <string name="label_valid_from">Valid From</string>
+    <string name="label_valid_until">Valid Until</string>
+    <string name="label_signature_algorithm">Signature Algorithm</string>
+    <string name="label_valid">Valid</string>
+    <string name="label_expired">Expired / Not yet valid</string>
+
+    <!-- Signature schemes -->
+    <string name="scheme_v1">V1 (JAR)</string>
+    <string name="scheme_v2">V2 (APK Signature Scheme v2)</string>
+    <string name="scheme_v3">V3 (APK Signature Scheme v3)</string>
+    <string name="scheme_v4">V4 (APK Signature Scheme v4)</string>
+
+    <!-- Messages -->
+    <string name="msg_success">APK signed successfully and saved to your selected folder.</string>
+    <string name="msg_saved_as">Saved as: %1$s</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme. The UI itself is rendered with Jetpack Compose /
+         Material 3; this theme only provides a Material splash/edge before Compose
+         takes over and avoids the default action bar. -->
+    <style name="Theme.ApkSigner" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
+    </style>
+</resources>

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- No sensitive keystore material is ever persisted, so nothing is backed up. -->
+</full-backup-content>
