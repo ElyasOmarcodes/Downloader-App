@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build debug APK
+    name: Build APK
     runs-on: ubuntu-latest
 
     steps:
@@ -31,15 +31,27 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --stacktrace
-
       - name: Run lint
         run: ./gradlew lintDebug --stacktrace
 
-      - name: Upload debug APK
+      - name: Build minified release APK
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Report APK sizes
+        run: |
+          echo "### APK sizes" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          ls -lh app/build/outputs/apk/release/*.apk app/build/outputs/apk/debug/*.apk \
+            | awk '{print $5"\t"$9}' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          ls -lh app/build/outputs/apk/release/*.apk app/build/outputs/apk/debug/*.apk
+
+      - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: apk-signer-debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: apk-signer-release
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error

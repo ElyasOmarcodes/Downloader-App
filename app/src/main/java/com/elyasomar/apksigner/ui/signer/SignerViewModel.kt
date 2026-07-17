@@ -36,7 +36,7 @@ class SignerViewModel @Inject constructor(
     }
 
     fun onOutputFolderSelected(uri: Uri) {
-        val name = storage.displayName(uri, "Selected folder")
+        val name = storage.folderName(uri, "Selected folder")
         _uiState.update { it.copy(outputFolder = SelectedDocument(uri, name)) }
     }
 

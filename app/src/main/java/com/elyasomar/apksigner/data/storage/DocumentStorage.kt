@@ -37,18 +37,32 @@ class DocumentStorage @Inject constructor(
         return target
     }
 
-    /** The user-visible name of a document, or a fallback when unavailable. */
+    /** The user-visible name of a single document, or a fallback when unavailable. */
     fun displayName(uri: Uri, fallback: String): String {
-        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-            ?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (index >= 0) {
-                        cursor.getString(index)?.takeIf { it.isNotBlank() }?.let { return it }
+        runCatching {
+            context.contentResolver
+                .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (index >= 0) {
+                            cursor.getString(index)?.takeIf { it.isNotBlank() }?.let { return it }
+                        }
                     }
                 }
-            }
+        }
         return fallback
+    }
+
+    /**
+     * The display name of a folder selected via [OpenDocumentTree]. A tree URI
+     * is not a document URI, so it must be resolved through [DocumentFile]
+     * rather than an OpenableColumns query (which would throw).
+     */
+    fun folderName(treeUri: Uri, fallback: String): String {
+        return runCatching {
+            DocumentFile.fromTreeUri(context, treeUri)?.name?.takeIf { it.isNotBlank() }
+        }.getOrNull() ?: fallback
     }
 
     /**

@@ -17,17 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Android
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.VerifiedUser
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -65,6 +54,7 @@ import com.elyasomar.apksigner.R
 import com.elyasomar.apksigner.domain.model.ApkInfo
 import com.elyasomar.apksigner.domain.model.CertificateInfo
 import com.elyasomar.apksigner.domain.model.SignatureVersions
+import com.elyasomar.apksigner.ui.icons.AppIcons
 import com.elyasomar.apksigner.ui.signer.components.InfoRow
 import com.elyasomar.apksigner.ui.signer.components.SectionCard
 
@@ -121,7 +111,7 @@ fun SignerScreen(
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
-            SectionCard(title = stringResource(R.string.section_apk), icon = Icons.Filled.Android) {
+            SectionCard(title = stringResource(R.string.section_apk), icon = AppIcons.Android) {
                 DocumentRow(
                     fileName = state.apk?.displayName,
                     placeholder = stringResource(R.string.placeholder_no_apk),
@@ -134,7 +124,7 @@ fun SignerScreen(
                 ) { Text(stringResource(R.string.action_select_apk)) }
             }
 
-            SectionCard(title = stringResource(R.string.section_keystore), icon = Icons.Filled.Key) {
+            SectionCard(title = stringResource(R.string.section_keystore), icon = AppIcons.Key) {
                 DocumentRow(
                     fileName = state.keystore?.displayName,
                     placeholder = stringResource(R.string.placeholder_no_keystore),
@@ -149,7 +139,7 @@ fun SignerScreen(
 
             SectionCard(
                 title = stringResource(R.string.section_credentials),
-                icon = Icons.Filled.Lock,
+                icon = AppIcons.Lock,
             ) {
                 CredentialFields(
                     state = state,
@@ -161,7 +151,7 @@ fun SignerScreen(
 
             SectionCard(
                 title = stringResource(R.string.section_signature_versions),
-                icon = Icons.Filled.Shield,
+                icon = AppIcons.Shield,
             ) {
                 SignatureVersionSelector(
                     versions = state.versions,
@@ -172,7 +162,7 @@ fun SignerScreen(
 
             SectionCard(
                 title = stringResource(R.string.section_output),
-                icon = Icons.Filled.Folder,
+                icon = AppIcons.Folder,
             ) {
                 DocumentRow(
                     fileName = state.outputFolder?.displayName,
@@ -225,7 +215,7 @@ fun SignerScreen(
 private fun DocumentRow(fileName: String?, placeholder: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            imageVector = Icons.Outlined.Description,
+            imageVector = AppIcons.Description,
             contentDescription = null,
             tint = if (fileName != null) {
                 MaterialTheme.colorScheme.primary
@@ -354,7 +344,7 @@ private fun SchemeToggle(
 private fun PasswordToggle(visible: Boolean, onToggle: (Boolean) -> Unit) {
     IconButton(onClick = { onToggle(!visible) }) {
         Icon(
-            imageVector = if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+            imageVector = if (visible) AppIcons.VisibilityOff else AppIcons.Visibility,
             contentDescription = null,
         )
     }
@@ -396,7 +386,7 @@ private fun SuccessCard(fileName: String) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Filled.CheckCircle,
+                imageVector = AppIcons.CheckCircle,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(28.dp),
@@ -423,7 +413,7 @@ private fun SuccessCard(fileName: String) {
 private fun ApkInfoCard(info: ApkInfo) {
     SectionCard(
         title = stringResource(R.string.section_apk_info),
-        icon = Icons.Filled.Android,
+        icon = AppIcons.Android,
     ) {
         InfoRow(stringResource(R.string.label_package), info.packageName)
         InfoRow(
@@ -440,7 +430,7 @@ private fun ApkInfoCard(info: ApkInfo) {
 private fun CertificateInfoCard(info: CertificateInfo) {
     SectionCard(
         title = stringResource(R.string.section_certificate_info),
-        icon = Icons.Filled.VerifiedUser,
+        icon = AppIcons.VerifiedUser,
     ) {
         InfoRow(stringResource(R.string.label_subject), info.subject)
         InfoRow(stringResource(R.string.label_issuer), info.issuer)

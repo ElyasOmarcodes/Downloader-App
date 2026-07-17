@@ -21,6 +21,10 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Ship a single locale; libraries otherwise bundle dozens of translated
+        // strings we never use, inflating the APK.
+        resourceConfigurations += listOf("en")
     }
 
     buildTypes {
@@ -31,6 +35,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Sign the minified release with the auto-generated debug key so the
+            // optimized APK is directly installable for testing.
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             applicationIdSuffix = ".debug"
@@ -74,7 +81,6 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended)
 
     implementation(libs.androidx.documentfile)
 
